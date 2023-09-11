@@ -4,6 +4,36 @@ from scipy.spatial import distance
 import numpy as np
 import os
 import pygame
+import tkinter as tk
+from tkinter import *
+from PIL import Image, ImageTk
+
+root = tk.Tk()
+
+root.config(bg='light blue')
+root.title('Hamiekung App')
+
+main_frame = Frame(root)
+main_frame.grid()
+main_frame.config(bg='light blue')
+main_frame.place(in_=root, anchor="c", relx=.5, rely=.5)
+
+title_label = Label(main_frame,bg="light blue", font="Times 36", text="Drowsiness Detection")
+title_label.grid(row=0, column=0, columnspan=2)
+description_label = Label(main_frame,bg="light blue", font="Times 18", text="By SMET Surawittayakarn School")
+description_label.grid(row=1, column=0, columnspan=2, pady=10)
+
+middle_frame = Frame(main_frame,bg="light blue")
+middle_frame.grid(row=2, column=0)
+
+camera_label = Label(middle_frame)
+camera_label.grid(row=0, column=0)
+
+notify_label = Label(middle_frame,bg="white", font='Times 24')
+notify_label.grid(row=1, column=0)
+
+exit_button = Button(middle_frame, text = "Exit",width=15, height=3, command = root.destroy)
+exit_button.grid(row=2, column=0, columnspan=2, pady=30, sticky=S)
 
 # Constants
 EAR_THRESHOLD = 0.25  # Eye aspect ratio threshold for detecting drowsiness
@@ -49,14 +79,19 @@ pygame.mixer.init()
 # Load the alarm sound
 pygame.mixer.music.load(alarm_sound_path)
 
-while True:
+def main():
+    global drowsy
+    global left_eye
+    global right_eye
+    global alarm_playing
+    global frame_counter
     # Read frame from video capture
     ret, frame = video_capture.read()
 
     # Check if frame is successfully read
     if not ret:
         print("Failed to read the frame.")
-        break
+        root.destroy()
 
     # Flip the frame horizontally
     frame = cv2.flip(frame, 1)
@@ -93,35 +128,41 @@ while True:
                         # Play the alarm sound
                         pygame.mixer.music.play()
 
-                    cv2.putText(frame, "Drowsy", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    notify_label.configure(text=" - Drowsy - ", fg="red")
+                    #cv2.putText(frame, "Drowsy", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             else:
                 frame_counter = 0
                 drowsy = False
 
         # If drowsiness is no longer detected, stop the alarm sound
         if not drowsy and alarm_playing:
+            notify_label.configure(text=" - Not Drowsy - ", fg="red")
             pygame.mixer.music.stop()
             alarm_playing = False
-
-        # Draw eye contours on the frame
-        cv2.polylines(frame, [left_eye], True, (0, 255, 0), 1)
-        cv2.polylines(frame, [right_eye], True, (0, 255, 0), 1)
 
     except Exception as e:
         print("Error:", str(e))
 
     # Display the resulting frame
-    cv2.imshow('Drowsiness Detection', frame)
-
+    cv2image= cv2.cvtColor(video_capture.read()[1],cv2.COLOR_BGR2RGB)
+    imgcv = Image.fromarray(cv2image)
+    imgtk = ImageTk.PhotoImage(image = imgcv)
+    camera_label.imgtk = imgtk
+    camera_label.configure(image=imgtk)
+    camera_label.after(20, main)
+    cv2.waitKey(1)
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        root.destroy()
 
+main()
+root.attributes('-fullscreen', True)
+notify_label.configure(text=" - Not Drowsy - ", fg="red")
+root.mainloop()
 # Release the video capture
 video_capture.release()
 
 # Stop pygame mixer
 pygame.mixer.quit()
 
-# Close the named window
-cv2.destroyWindow('Drowsiness Detection')
+#By Thanapat and Techin (4,8)
