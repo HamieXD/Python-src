@@ -8,8 +8,8 @@ import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
 
+# GUI setup
 root = tk.Tk()
-
 root.config(bg='light blue')
 root.title('Hamiekung App')
 
@@ -18,21 +18,21 @@ main_frame.grid()
 main_frame.config(bg='light blue')
 main_frame.place(in_=root, anchor="c", relx=.5, rely=.5)
 
-title_label = Label(main_frame,bg="light blue", font="Times 36", text="Drowsiness Detection")
+title_label = Label(main_frame, bg="light blue", font="Times 36", text="Drowsiness Detection")
 title_label.grid(row=0, column=0, columnspan=2)
-description_label = Label(main_frame,bg="light blue", font="Times 18", text="By SMET Surawittayakarn School")
+description_label = Label(main_frame, bg="light blue", font="Times 18", text="By SMET Surawittayakarn School")
 description_label.grid(row=1, column=0, columnspan=2, pady=10)
 
-middle_frame = Frame(main_frame,bg="light blue")
+middle_frame = Frame(main_frame, bg="light blue")
 middle_frame.grid(row=2, column=0)
 
 camera_label = Label(middle_frame)
 camera_label.grid(row=0, column=0)
 
-notify_label = Label(middle_frame,bg="white", font='Times 24')
+notify_label = Label(middle_frame, bg="white", font='Times 24')
 notify_label.grid(row=1, column=0)
 
-exit_button = Button(middle_frame, text = "Exit",width=15, height=3, command = root.destroy)
+exit_button = Button(middle_frame, text="Exit", width=15, height=3, command=root.destroy)
 exit_button.grid(row=2, column=0, columnspan=2, pady=30, sticky=S)
 
 # Constants
@@ -65,7 +65,7 @@ if not video_capture.isOpened():
     print("Failed to open the video capture.")
     exit()
 
-# Initialize frame counters and drowsiness flag
+# Initialize frame counters and drowsiness flags
 frame_counter = 0
 drowsy = False
 alarm_playing = False
@@ -79,12 +79,18 @@ pygame.mixer.init()
 # Load the alarm sound
 pygame.mixer.music.load(alarm_sound_path)
 
+# Function to draw green outlines around the eyes
+def draw_eye_outline(frame, eye_points):
+    for i in range(len(eye_points)):
+        cv2.line(frame, tuple(eye_points[i]), tuple(eye_points[(i + 1) % len(eye_points)]), (0, 255, 0), 2)
+
 def main():
     global drowsy
     global left_eye
     global right_eye
     global alarm_playing
     global frame_counter
+
     # Read frame from video capture
     ret, frame = video_capture.read()
 
@@ -112,6 +118,10 @@ def main():
             left_eye = np.array([(landmarks.part(n).x, landmarks.part(n).y) for n in range(36, 42)], np.int32)
             right_eye = np.array([(landmarks.part(n).x, landmarks.part(n).y) for n in range(42, 48)], np.int32)
 
+            # Draw green outlines around the eyes
+            draw_eye_outline(frame, left_eye)
+            draw_eye_outline(frame, right_eye)
+
             # Calculate eye aspect ratios (EAR)
             left_ear = eye_aspect_ratio(left_eye)
             right_ear = eye_aspect_ratio(right_eye)
@@ -129,14 +139,13 @@ def main():
                         pygame.mixer.music.play()
 
                     notify_label.configure(text=" - Drowsy - ", fg="red")
-                    #cv2.putText(frame, "Drowsy", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             else:
                 frame_counter = 0
                 drowsy = False
 
         # If drowsiness is no longer detected, stop the alarm sound
         if not drowsy and alarm_playing:
-            notify_label.configure(text=" - Not Drowsy - ", fg="red")
+            notify_label.configure(text=" - Not Drowsy - ", fg="green")
             pygame.mixer.music.stop()
             alarm_playing = False
 
@@ -144,9 +153,9 @@ def main():
         print("Error:", str(e))
 
     # Display the resulting frame
-    cv2image= cv2.cvtColor(video_capture.read()[1],cv2.COLOR_BGR2RGB)
+    cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     imgcv = Image.fromarray(cv2image)
-    imgtk = ImageTk.PhotoImage(image = imgcv)
+    imgtk = ImageTk.PhotoImage(image=imgcv)
     camera_label.imgtk = imgtk
     camera_label.configure(image=imgtk)
     camera_label.after(20, main)
@@ -155,14 +164,14 @@ def main():
     if cv2.waitKey(1) & 0xFF == ord('q'):
         root.destroy()
 
-main()
-root.attributes('-fullscreen', True)
-notify_label.configure(text=" - Not Drowsy - ", fg="red")
-root.mainloop()
+if __name__ == "__main__":
+    main()
+    root.attributes('-fullscreen', True)
+    notify_label.configure(text=" - Not Drowsy - ", fg="green")
+    root.mainloop()
+
 # Release the video capture
 video_capture.release()
 
 # Stop pygame mixer
 pygame.mixer.quit()
-
-#By Thanapat and Techin (4,8)
